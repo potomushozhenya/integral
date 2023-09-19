@@ -58,7 +58,7 @@ def polyCalc(n):
 def polyMean(poly, leftBorder, rightBorder):
     result = 0
     for monom in poly:
-        result += monom[0]*(rightBorder ** monom[1] - leftBorder**monom[1])
+        result += -(monom[0]*((2.3-rightBorder) ** monom[1] - (2.3-leftBorder)**monom[1]))
     return result
 
 
@@ -71,19 +71,18 @@ def momentsCalculation(leftBorder, rightBorder, nodeNumber):
 
 
 def interpolationQuadratureFormula(nodeNumber, nodeDistribution):
-    #Замена t=x-a следовательно в функцию подставлять сдвинутые значения
+    #Замена t=a-x следовательно в функцию подставлять сдвинутые значения
     result = 0
     moments = momentsCalculation(1.8, 2.3, nodeNumber)
     nodeList = nodeDistribution(1.8, 2.3, nodeNumber)
     X = np.transpose(np.vander(nodeList, increasing=True))
     A = np.linalg.solve(X, moments)
     for i in range(nodeNumber):
-        result += A[i]*F(nodeList[i])
+        result += A[i]*f(nodeList[i])
     return result
 
 
-
-print(interpolationQuadratureFormula(10,nodeEquidistant))
+print(interpolationQuadratureFormula(20, nodeEquidistant))
 #print(interpolationQuadratureFormula(3, nodeEquidistant))
-#print(momentsCalculation(0,0.5, 1))git 
+#print(momentsCalculation(0,0.5, 1))git
 #print(integralWithSumDarboux(F, 1.8, 2.3, nodeEquidistant, 500000))
