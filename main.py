@@ -3,7 +3,7 @@ import numpy as np
 from math import factorial
 plt.style.use('_mpl-gallery')
 
-
+integralCorrectMean = 1.185141974956241824914878594317090726677
 def f(x):
     return 3.7 * np.cos((3 * x) / 2) * np.exp((-4 * x) / 3) + 2.4 * np.sin((9 * x) / 2) * np.exp((2 * x) / 3) + 4
 
@@ -30,7 +30,7 @@ def nodeOptimal(leftBorder, rightBorder, nodeNumber):
 def integralWithSumDarboux(function, leftBorder, rightBorder, nodeDistribution, nodeNumber):
     result = 0
     nodeList = nodeDistribution(leftBorder, rightBorder, nodeNumber)
-    for i in range(nodeNumber+1):
+    for i in range(nodeNumber-1):
         result += function(nodeList[i]+(nodeList[i+1]-nodeList[i])/2)*(nodeList[i+1]-nodeList[i])
     return result
 
@@ -70,11 +70,11 @@ def momentsCalculation(leftBorder, rightBorder, nodeNumber):
     return moments
 
 
-def interpolationQuadratureFormula(nodeNumber, nodeDistribution):
+def interpolationQuadratureFormula(leftBorder, rightBorder, nodeNumber, nodeDistribution):
     #Замена t=a-x следовательно в функцию подставлять сдвинутые значения
     result = 0
-    moments = momentsCalculation(1.8, 2.3, nodeNumber)
-    nodeList = nodeDistribution(1.8, 2.3, nodeNumber)
+    moments = momentsCalculation(leftBorder, rightBorder, nodeNumber)
+    nodeList = nodeDistribution(leftBorder, rightBorder, nodeNumber)
     X = np.transpose(np.vander(nodeList, increasing=True))
     A = np.linalg.solve(X, moments)
     for i in range(nodeNumber):
@@ -82,7 +82,16 @@ def interpolationQuadratureFormula(nodeNumber, nodeDistribution):
     return result
 
 
-print(interpolationQuadratureFormula(20, nodeEquidistant))
+def compoundQuadratureFormulas(nodeNumber, nodeDistribution, pointsPerSection):
+    result = 0
+    nodeList = nodeDistribution(1.8, 2.3, nodeNumber)
+    for i in range(nodeNumber-1):
+        result += interpolationQuadratureFormula(nodeList[i], nodeList[i+1], pointsPerSection, nodeDistribution)
+    return result
+
+
+print(compoundQuadratureFormulas(50, nodeEquidistant, 19)-integralCorrectMean)
+#print(interpolationQuadratureFormula(1.8,2.3,21, nodeEquidistant)-integralCorrectMean)
 #print(interpolationQuadratureFormula(3, nodeEquidistant))
-#print(momentsCalculation(0,0.5, 1))git
-#print(integralWithSumDarboux(F, 1.8, 2.3, nodeEquidistant, 500000))
+#print(momentsCalculation(0,0.5, 1))
+#print(integralWithSumDarboux(F, 1.8, 2.3, nodeEquidistant, 1000000)-integralCorrectMean)
