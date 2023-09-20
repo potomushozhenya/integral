@@ -1,15 +1,19 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from math import factorial
-plt.style.use('_mpl-gallery')
+import matplotlib as mpl
+
+mpl.use('Qt5Agg')
 
 integralCorrectMean = 1.185141974956241824914878594317090726677
+
+
 def f(x):
     return 3.7 * np.cos((3 * x) / 2) * np.exp((-4 * x) / 3) + 2.4 * np.sin((9 * x) / 2) * np.exp((2 * x) / 3) + 4
 
 
 def F(x):
-    return f(x) / ((2.3 - x) ** (0.6))
+    return f(x) / ((2.3 - x) ** 0.6)
 
 
 def nodeEquidistant(leftBorder, rightBorder, nodeNumber):
@@ -37,11 +41,10 @@ def integralWithSumDarboux(function, leftBorder, rightBorder, nodeDistribution, 
 
 def printDarbouxResult(nodesNumber):
     integral = []
-    for i in range(nodesNumber):
+    for i in range(3, nodesNumber):
         integral.append(integralWithSumDarboux(F, 1.8, 2.3, nodeEquidistant, i))
-    x = np.linspace(1.8, 2.2, nodesNumber)
-    fig, ax = plt.subplots()
-    ax.plot(x, integral, linewidth=1)
+    x = np.linspace(3, nodesNumber, nodesNumber-3)
+    plt.plot(x, integral, linewidth=1)
     plt.show()
     return integral[-1]
 
@@ -82,6 +85,16 @@ def interpolationQuadratureFormula(leftBorder, rightBorder, nodeNumber, nodeDist
     return result
 
 
+def printQF(nodesNumber):
+    integral = []
+    for i in range(3, nodesNumber):
+        integral.append(interpolationQuadratureFormula(1.8,2.3, i, nodeEquidistant))
+    x = np.linspace(3, nodesNumber, nodesNumber - 3)
+    plt.plot(x, integral, linewidth=1)
+    plt.show()
+    return integral[-1]
+
+
 def compoundQuadratureFormulas(nodeNumber, nodeDistribution, pointsPerSection):
     result = 0
     nodeList = nodeDistribution(1.8, 2.3, nodeNumber)
@@ -90,8 +103,23 @@ def compoundQuadratureFormulas(nodeNumber, nodeDistribution, pointsPerSection):
     return result
 
 
-print(compoundQuadratureFormulas(50, nodeEquidistant, 19)-integralCorrectMean)
+def printCompoundQF(nodesNumber):
+    integral = []
+    for i in range(3, nodesNumber):
+        integral.append(compoundQuadratureFormulas(i, nodeEquidistant, 3))
+    x = np.linspace(3, nodesNumber, nodesNumber - 3)
+    plt.plot(x, integral, linewidth=1)
+    plt.show()
+    return integral[-1]
+
+
+#printCompoundQF(100)
+#printQF(80)
+#printDarbouxResult(10000)
+#print(compoundQuadratureFormulas(10000, nodeEquidistant, 3)-integralCorrectMean)
 #print(interpolationQuadratureFormula(1.8,2.3,21, nodeEquidistant)-integralCorrectMean)
 #print(interpolationQuadratureFormula(3, nodeEquidistant))
 #print(momentsCalculation(0,0.5, 1))
 #print(integralWithSumDarboux(F, 1.8, 2.3, nodeEquidistant, 1000000)-integralCorrectMean)
+
+#Для составной квадратурной формуле на базе Ньютона котесса для отрезка берем 3, а для Гаусса 4
