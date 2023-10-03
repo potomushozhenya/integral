@@ -85,10 +85,31 @@ def interpolationQuadratureFormula(leftBorder, rightBorder, nodeNumber, nodeDist
     return result
 
 
+def quadratureFormulaGauss(leftBorder, rightBorder, nodeNumber):
+    moments = momentsCalculation(leftBorder, rightBorder, 2*nodeNumber)
+    right_part = [-moments[i] for i in range(nodeNumber, 2*nodeNumber)]
+    left_part = []
+    for i in range(nodeNumber):
+        curr = []
+        for j in range(nodeNumber):
+            curr.append(moments[j+i])
+        left_part.append(curr)
+    a = np.linalg.solve(left_part, right_part)
+    poly = [1]
+    for i in range(nodeNumber):
+        poly.append(a[nodeNumber-i-1])
+    roots = np.roots(poly)
+    X = np.transpose(np.vander(roots, increasing=True))
+    A = np.linalg.solve(X, moments[:nodeNumber])
+    result = 0
+    for i in range(nodeNumber):
+        result += A[i]*f(roots[i])
+    return result
+
 def printQF(nodesNumber):
     integral = []
     for i in range(3, nodesNumber):
-        integral.append(interpolationQuadratureFormula(1.8,2.3, i, nodeEquidistant))
+        integral.append(interpolationQuadratureFormula(1.8, 2.3, i, nodeEquidistant))
     x = np.linspace(3, nodesNumber, nodesNumber - 3)
     plt.plot(x, integral, linewidth=1)
     plt.show()
@@ -113,11 +134,12 @@ def printCompoundQF(nodesNumber):
     return integral[-1]
 
 
+print(quadratureFormulaGauss(1.8, 2.3, 7)-integralCorrectMean)
 #printCompoundQF(100)
 #printQF(80)
 #printDarbouxResult(10000)
 #print(compoundQuadratureFormulas(10000, nodeEquidistant, 3)-integralCorrectMean)
-#print(interpolationQuadratureFormula(1.8,2.3,21, nodeEquidistant)-integralCorrectMean)
+#print(np.log10(interpolationQuadratureFormula(1.8,2.3,21, nodeEquidistant)-integralCorrectMean))
 #print(interpolationQuadratureFormula(3, nodeEquidistant))
 #print(momentsCalculation(0,0.5, 1))
 #print(integralWithSumDarboux(F, 1.8, 2.3, nodeEquidistant, 1000000)-integralCorrectMean)
