@@ -82,7 +82,7 @@ def interpolationQuadratureFormula(leftBorder, rightBorder, nodeNumber, nodeDist
     A = np.linalg.solve(X, moments)
     for i in range(nodeNumber):
         result += A[i]*f(nodeList[i])
-    return result
+    return [result, A]
 
 
 def quadratureFormulaGauss(leftBorder, rightBorder, nodeNumber):
@@ -99,21 +99,64 @@ def quadratureFormulaGauss(leftBorder, rightBorder, nodeNumber):
     for i in range(nodeNumber):
         poly.append(a[nodeNumber-i-1])
     roots = np.roots(poly)
+    for root in roots:
+        if root < leftBorder or root > rightBorder:
+            return None
     X = np.transpose(np.vander(roots, increasing=True))
     A = np.linalg.solve(X, moments[:nodeNumber])
+    for a in A:
+        if a < 0:
+            return None
     result = 0
     for i in range(nodeNumber):
         result += A[i]*f(roots[i])
-    return result
+    return result, A
+
 
 def printQF(nodesNumber):
     integral = []
+    A_sum = []
+    min = 100
+    index = 0
     for i in range(3, nodesNumber):
-        integral.append(interpolationQuadratureFormula(1.8, 2.3, i, nodeEquidistant))
+        elem, A = interpolationQuadratureFormula(1.8, 2.3, i, nodeEquidistant)
+        elem = np.log10(abs(elem-integralCorrectMean))
+        integral.append(elem)
+        A_sum.append(sum(abs(A)))
+        if elem < min:
+            min = elem
+            index = i
     x = np.linspace(3, nodesNumber, nodesNumber - 3)
-    plt.plot(x, integral, linewidth=1)
+    fig, axs = plt.subplots(2)
+    axs[0].plot(x, integral, linewidth=1)
+    axs[0].set_title('Error rate')
+    axs[1].plot(x, A_sum)
+    axs[1].set_title('A sum')
     plt.show()
-    return integral[-1]
+    return min, index
+
+
+def printQFGauss(nodesNumber):
+    integral = []
+    A_sum = []
+    min = 100
+    index = 0
+    for i in range(3, nodesNumber):
+        elem, A = quadratureFormulaGauss(1.8, 2.3, i)
+        elem = np.log10(abs(elem-integralCorrectMean))
+        integral.append(elem)
+        A_sum.append(sum(abs(A)))
+        if elem < min:
+            min = elem
+            index = i
+    x = np.linspace(3, nodesNumber, nodesNumber - 3)
+    fig, axs = plt.subplots(2)
+    axs[0].plot(x, integral, linewidth=1)
+    axs[0].set_title('Error rate')
+    axs[1].plot(x, A_sum)
+    axs[1].set_title('A sum')
+    plt.show()
+    return min, index
 
 
 def compoundQuadratureFormulas(nodeNumber, nodeDistribution, pointsPerSection):
@@ -134,9 +177,10 @@ def printCompoundQF(nodesNumber):
     return integral[-1]
 
 
-print(quadratureFormulaGauss(1.8, 2.3, 7)-integralCorrectMean)
+#print(quadratureFormulaGauss(1.8, 2.3, 7)-integralCorrectMean)
 #printCompoundQF(100)
-#printQF(80)
+#print(printQF(25))
+print(printQFGauss(25))
 #printDarbouxResult(10000)
 #print(compoundQuadratureFormulas(10000, nodeEquidistant, 3)-integralCorrectMean)
 #print(np.log10(interpolationQuadratureFormula(1.8,2.3,21, nodeEquidistant)-integralCorrectMean))
