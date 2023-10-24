@@ -74,7 +74,6 @@ def momentsCalculation(leftBorder, rightBorder, nodeNumber):
 
 
 def interpolationQuadratureFormula(leftBorder, rightBorder, nodeNumber, nodeDistribution):
-    #Замена t=a-x следовательно в функцию подставлять сдвинутые значения
     result = 0
     moments = momentsCalculation(leftBorder, rightBorder, nodeNumber)
     nodeList = nodeDistribution(leftBorder, rightBorder, nodeNumber)
@@ -159,22 +158,57 @@ def printQFGauss(nodesNumber):
     return min, index
 
 
-def compoundQuadratureFormulas(nodeNumber, nodeDistribution, pointsPerSection):
+def compoundQuadratureFormulas(nodeNumber, pointsPerSection, flag_is_newton):
     result = 0
-    nodeList = nodeDistribution(1.8, 2.3, nodeNumber)
-    for i in range(nodeNumber-1):
-        result += interpolationQuadratureFormula(nodeList[i], nodeList[i+1], pointsPerSection, nodeDistribution)
+    nodeList = nodeEquidistant(1.8, 2.3, nodeNumber)
+    if flag_is_newton:
+        for i in range(nodeNumber-1):
+            result += interpolationQuadratureFormula(nodeList[i], nodeList[i+1], pointsPerSection, nodeEquidistant)
+    else:
+        for i in range(nodeNumber-1):
+            result += quadratureFormulaGauss(nodeList[i], nodeList[i+1], pointsPerSection)
     return result
 
 
-def printCompoundQF(nodesNumber):
-    integral = []
-    for i in range(3, nodesNumber):
-        integral.append(compoundQuadratureFormulas(i, nodeEquidistant, 3))
-    x = np.linspace(3, nodesNumber, nodesNumber - 3)
-    plt.plot(x, integral, linewidth=1)
-    plt.show()
-    return integral[-1]
+def processAitken(sum_h1, sum_h2, sum_h3, l):
+    return -1*(np.log((sum_h3-sum_h2) / (sum_h2-sum_h1))) / (np.log(l))
+
+
+def ruleRunge(m, l, sum_h1, sum_h2):
+    r_h1 = (sum_h2 - sum_h1) / (1 - l ** (-m))
+    r_h2 = (sum_h2 - sum_h1) / (l ** (-m) - 1)
+    return [r_h1,r_h2]
+
+
+def methodRichardson(sum_h1, sum_h2, l, m):
+    return sum_h2 + ((sum_h2 - sum_h1) / (l**m - 1))
+
+
+def optimalIntegral(h0, l, flag_is_newton):
+    if flag_is_newton:
+        pointsPerSection = 3
+    else:
+        pointsPerSection = 4
+    flag = True
+    prev_h1 = compoundQuadratureFormulas((0.5/h0), pointsPerSection, flag_is_newton)
+    prev_h2 = compoundQuadratureFormulas((0.5/(h0*l)), pointsPerSection, flag_is_newton)
+    prev_h3 = compoundQuadratureFormulas((0.5/(h0*l*l)), pointsPerSection, flag_is_newton)
+    while flag:
+
+
+
+        if :
+            flag = False
+
+
+#def printCompoundQF(nodesNumber):
+#    integral = []
+#    for i in range(3, nodesNumber):
+#        integral.append(compoundQuadratureFormulas(i, nodeEquidistant, 3))
+#    x = np.linspace(3, nodesNumber, nodesNumber - 3)
+#    plt.plot(x, integral, linewidth=1)
+#    plt.show()
+#    return integral[-1]
 
 
 #print(quadratureFormulaGauss(1.8, 2.3, 7)-integralCorrectMean)
@@ -182,7 +216,7 @@ def printCompoundQF(nodesNumber):
 #print(printQF(25))
 print(printQFGauss(25))
 #printDarbouxResult(10000)
-#print(compoundQuadratureFormulas(10000, nodeEquidistant, 3)-integralCorrectMean)
+#print(compoundQuadratureFormulas(10000, 3,)-integralCorrectMean)
 #print(np.log10(interpolationQuadratureFormula(1.8,2.3,21, nodeEquidistant)-integralCorrectMean))
 #print(interpolationQuadratureFormula(3, nodeEquidistant))
 #print(momentsCalculation(0,0.5, 1))
