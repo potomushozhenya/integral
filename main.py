@@ -18,6 +18,8 @@ def F(x):
 
 def nodeEquidistant(leftBorder, rightBorder, nodeNumber):
     nodeList = []
+    if nodeNumber == 1:
+        return [leftBorder+rightBorder/2]
     for i in range(0, nodeNumber):
         nodeList.append(leftBorder + i * (rightBorder - leftBorder) / (nodeNumber-1))
     return nodeList
@@ -109,7 +111,7 @@ def quadratureFormulaGauss(leftBorder, rightBorder, nodeNumber):
     result = 0
     for i in range(nodeNumber):
         result += A[i]*f(roots[i])
-    return result, A
+    return [result, A]
 
 
 def printQF(nodesNumber):
@@ -163,10 +165,10 @@ def compoundQuadratureFormulas(nodeNumber, pointsPerSection, flag_is_newton):
     nodeList = nodeEquidistant(1.8, 2.3, nodeNumber)
     if flag_is_newton:
         for i in range(nodeNumber-1):
-            result += interpolationQuadratureFormula(nodeList[i], nodeList[i+1], pointsPerSection, nodeEquidistant)
+            result += interpolationQuadratureFormula(nodeList[i], nodeList[i+1], pointsPerSection, nodeEquidistant)[0]
     else:
         for i in range(nodeNumber-1):
-            result += quadratureFormulaGauss(nodeList[i], nodeList[i+1], pointsPerSection)
+            result += quadratureFormulaGauss(nodeList[i], nodeList[i+1], pointsPerSection)[0]
     return result
 
 
@@ -174,32 +176,46 @@ def processAitken(sum_h1, sum_h2, sum_h3, l):
     return -1*(np.log((sum_h3-sum_h2) / (sum_h2-sum_h1))) / (np.log(l))
 
 
-def ruleRunge(m, l, sum_h1, sum_h2):
+def ruleRunge(m, l, sum_h1, sum_h2, h, eps):
     r_h1 = (sum_h2 - sum_h1) / (1 - l ** (-m))
-    r_h2 = (sum_h2 - sum_h1) / (l ** (-m) - 1)
-    return [r_h1,r_h2]
+    #r_h2 = (sum_h2 - sum_h1) / (l ** (-m) - 1)
+    return 0.95 * h *((eps/abs(r_h1))**(1/m))
 
 
 def methodRichardson(sum_h1, sum_h2, l, m):
     return sum_h2 + ((sum_h2 - sum_h1) / (l**m - 1))
 
 
-def optimalIntegral(h0, l, flag_is_newton):
+def optimalIntegral(h0, l, flag_is_newton, eps, bigMesh):
+    #bigMesh булевая переменная отвечающая за сетки если true то h b h/l если false то h/l и h/l^2
     if flag_is_newton:
         pointsPerSection = 3
     else:
         pointsPerSection = 4
     flag = True
-    prev_h1 = compoundQuadratureFormulas((0.5/h0), pointsPerSection, flag_is_newton)
-    prev_h2 = compoundQuadratureFormulas((0.5/(h0*l)), pointsPerSection, flag_is_newton)
-    prev_h3 = compoundQuadratureFormulas((0.5/(h0*l*l)), pointsPerSection, flag_is_newton)
+    h = [([int(0.5/h0), int(0.5/(h0*l)), int(0.5/(h0*l*l))])]
+    prev_h1 = compoundQuadratureFormulas(h[0][0], pointsPerSection, flag_is_newton)
+    prev_h2 = compoundQuadratureFormulas(h[0][1], pointsPerSection, flag_is_newton)
+    prev_h3 = compoundQuadratureFormulas(h[0][2], pointsPerSection, flag_is_newton)
+    curr_h1, curr_h2, curr_h3 = 0, 0, 0
+    m = processAitken(prev_h1, prev_h2, prev_h3, l)
+    hOpt = ruleRunge(m, l, prev_h1, prev_h2, h0, eps)
+    h.append([int(0.5/hOpt), int(0.5/ (hOpt * l)), int(0.5 / (hOpt * l * l))])
     while flag:
-
-
-
-        if :
+        curr_h1 = compoundQuadratureFormulas(h[-1][0], pointsPerSection, flag_is_newton)
+        curr_h2 = compoundQuadratureFormulas(h[-1][1], pointsPerSection, flag_is_newton)
+        curr_h3 = compoundQuadratureFormulas(h[-1][2], pointsPerSection, flag_is_newton)
+        print(curr_h1-integralCorrectMean, curr_h2-integralCorrectMean, curr_h3-integralCorrectMean)
+        m = processAitken(curr_h1, curr_h2, curr_h3, l)
+        if abs((curr_h2 - prev_h2 - curr_h1 + prev_h1)/(((2/h[-1][0])**m)*(1-l**(-m)))) < 0.0000001:
             flag = False
-
+        else:
+            prev_h1 = curr_h1
+            prev_h2 = curr_h2
+            prev_h3 = curr_h3
+            hOpt = ruleRunge(m, l, curr_h1, curr_h2, 2/h[-1][0], eps)
+            h.append([int(hOpt), int(hOpt / l), int(hOpt / (l * l))])
+    return curr_h1-integralCorrectMean, curr_h2-integralCorrectMean, curr_h3-integralCorrectMean
 
 #def printCompoundQF(nodesNumber):
 #    integral = []
@@ -210,11 +226,11 @@ def optimalIntegral(h0, l, flag_is_newton):
 #    plt.show()
 #    return integral[-1]
 
-
+print(optimalIntegral(0.01, 0.5, 1, 0.0000000001, 1))
 #print(quadratureFormulaGauss(1.8, 2.3, 7)-integralCorrectMean)
 #printCompoundQF(100)
 #print(printQF(25))
-print(printQFGauss(25))
+#print(printQFGauss(25))
 #printDarbouxResult(10000)
 #print(compoundQuadratureFormulas(10000, 3,)-integralCorrectMean)
 #print(np.log10(interpolationQuadratureFormula(1.8,2.3,21, nodeEquidistant)-integralCorrectMean))
