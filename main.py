@@ -1,3 +1,5 @@
+import math
+
 import matplotlib.pyplot as plt
 import numpy as np
 from math import factorial
@@ -179,54 +181,35 @@ def processAitken(sum_h1, sum_h2, sum_h3, l):
 def ruleRunge(m, l, sum_h1, sum_h2, h, eps):
     r_h1 = (sum_h2 - sum_h1) / (1 - l ** (-m))
     #r_h2 = (sum_h2 - sum_h1) / (l ** (-m) - 1)
-    return 0.95 * h *((eps/abs(r_h1))**(1/m))
+    return 0.95 * h * ((eps/abs(r_h1))**(1/m))
 
 
-def methodRichardson(sum_h1, sum_h2, l, m):
-    return sum_h2 + ((sum_h2 - sum_h1) / (l**m - 1))
-
-
-def optimalIntegral(h0, l, flag_is_newton, eps, bigMesh):
+def optimalIntegral(h0, l, flag_is_newton, eps):
     #bigMesh булевая переменная отвечающая за сетки если true то h b h/l если false то h/l и h/l^2
     if flag_is_newton:
         pointsPerSection = 3
     else:
         pointsPerSection = 4
-    flag = True
-    h = [([int(0.5/h0), int(0.5/(h0*l)), int(0.5/(h0*l*l))])]
-    prev_h1 = compoundQuadratureFormulas(h[0][0], pointsPerSection, flag_is_newton)
-    prev_h2 = compoundQuadratureFormulas(h[0][1], pointsPerSection, flag_is_newton)
-    prev_h3 = compoundQuadratureFormulas(h[0][2], pointsPerSection, flag_is_newton)
-    curr_h1, curr_h2, curr_h3 = 0, 0, 0
-    m = processAitken(prev_h1, prev_h2, prev_h3, l)
-    hOpt = ruleRunge(m, l, prev_h1, prev_h2, h0, eps)
-    h.append([int(0.5/hOpt), int(0.5/ (hOpt * l)), int(0.5 / (hOpt * l * l))])
-    while flag:
-        curr_h1 = compoundQuadratureFormulas(h[-1][0], pointsPerSection, flag_is_newton)
-        curr_h2 = compoundQuadratureFormulas(h[-1][1], pointsPerSection, flag_is_newton)
-        curr_h3 = compoundQuadratureFormulas(h[-1][2], pointsPerSection, flag_is_newton)
-        print(curr_h1-integralCorrectMean, curr_h2-integralCorrectMean, curr_h3-integralCorrectMean)
-        m = processAitken(curr_h1, curr_h2, curr_h3, l)
-        if abs((curr_h2 - prev_h2 - curr_h1 + prev_h1)/(((2/h[-1][0])**m)*(1-l**(-m)))) < 0.0000001:
-            flag = False
-        else:
-            prev_h1 = curr_h1
-            prev_h2 = curr_h2
-            prev_h3 = curr_h3
-            hOpt = ruleRunge(m, l, curr_h1, curr_h2, 2/h[-1][0], eps)
-            h.append([int(hOpt), int(hOpt / l), int(hOpt / (l * l))])
-    return curr_h1-integralCorrectMean, curr_h2-integralCorrectMean, curr_h3-integralCorrectMean
-
-#def printCompoundQF(nodesNumber):
-#    integral = []
-#    for i in range(3, nodesNumber):
-#        integral.append(compoundQuadratureFormulas(i, nodeEquidistant, 3))
-#    x = np.linspace(3, nodesNumber, nodesNumber - 3)
-#    plt.plot(x, integral, linewidth=1)
-#    plt.show()
-#    return integral[-1]
-
-print(optimalIntegral(0.01, 0.5, 1, 0.0000000001, 1))
+    h_form = math.ceil(0.5/h0)
+    s = [compoundQuadratureFormulas(math.ceil(h_form * (l**i)), pointsPerSection, flag_is_newton) for i in range(3)]
+    while True:
+        m = processAitken(s[0], s[1], s[2], l)
+        h_form *= l * l * l
+        c1 = abs((s[1] - s[0]) / ((h0**m) * (1 - l**(-m))))
+        c2 = abs((s[2] - s[1]) / (((h0 / l)**m) * (1 - l ** (-m))))
+        diff = abs(c1 - c2)
+        if diff < 10**-6:
+            break
+        s[0] = s[1]
+        s[1] = s[2]
+        s[2] = compoundQuadratureFormulas(h_form, pointsPerSection, flag_is_newton)
+        h_form /= l
+    h_opt = h_form * ruleRunge(m, l, s[0], s[1], h0, eps)
+    h_opt_form = math.ceil(0.5/h_opt)
+    if h_opt_form > (h_form/l):
+        s[2] = compoundQuadratureFormulas(h_opt_form, pointsPerSection, flag_is_newton)
+    return s[2]
+print(optimalIntegral(0.01, 0.5, 1, 10**-16) - integralCorrectMean)
 #print(quadratureFormulaGauss(1.8, 2.3, 7)-integralCorrectMean)
 #printCompoundQF(100)
 #print(printQF(25))
