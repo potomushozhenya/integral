@@ -1,5 +1,4 @@
 import math
-
 import matplotlib.pyplot as plt
 import numpy as np
 from math import factorial
@@ -101,15 +100,15 @@ def quadratureFormulaGauss(leftBorder, rightBorder, nodeNumber):
     poly = [1]
     for i in range(nodeNumber):
         poly.append(a[nodeNumber-i-1])
-    roots = np.roots(poly)
-    for root in roots:
-        if root < leftBorder or root > rightBorder:
-            return None
+    roots = np.sort(np.roots(poly))
+    #for root in roots:
+    #    if root < leftBorder or root > rightBorder:
+    #        return None
     X = np.transpose(np.vander(roots, increasing=True))
     A = np.linalg.solve(X, moments[:nodeNumber])
-    for a in A:
-        if a < 0:
-            return None
+    #for a in A:
+    #    if a < 0:
+    #        return None
     result = 0
     for i in range(nodeNumber):
         result += A[i]*f(roots[i])
@@ -178,10 +177,8 @@ def processAitken(sum_h1, sum_h2, sum_h3, l):
     return -1*(np.log((sum_h3-sum_h2) / (sum_h2-sum_h1))) / (np.log(l))
 
 
-def ruleRunge(m, l, sum_h1, sum_h2, h, eps):
-    r_h1 = (sum_h2 - sum_h1) / (1 - l ** (-m))
-    #r_h2 = (sum_h2 - sum_h1) / (l ** (-m) - 1)
-    return 0.95 * h * ((eps/abs(r_h1))**(1/m))
+def ruleRunge(m, l, sum_h1, sum_h2, h_form, eps):
+    return h_form / (0.95 * ( ((eps * (1 - l**(-m))) / abs(sum_h2 - sum_h1) )**(1/m)))
 
 
 def optimalIntegral(h0, l, flag_is_newton, eps):
@@ -192,24 +189,29 @@ def optimalIntegral(h0, l, flag_is_newton, eps):
         pointsPerSection = 4
     h_form = math.ceil(0.5/h0)
     s = [compoundQuadratureFormulas(math.ceil(h_form * (l**i)), pointsPerSection, flag_is_newton) for i in range(3)]
+    mPrev = 0
     while True:
         m = processAitken(s[0], s[1], s[2], l)
-        h_form *= l * l * l
-        c1 = abs((s[1] - s[0]) / ((h0**m) * (1 - l**(-m))))
-        c2 = abs((s[2] - s[1]) / (((h0 / l)**m) * (1 - l ** (-m))))
-        diff = abs(c1 - c2)
-        if diff < 10**-6:
+        print(h_form*l*l, m, integralCorrectMean - s[2])
+        if abs(mPrev - m) < 0.15:
             break
+        mPrev = m
+        h_form = h_form * l
         s[0] = s[1]
         s[1] = s[2]
-        s[2] = compoundQuadratureFormulas(h_form, pointsPerSection, flag_is_newton)
-        h_form /= l
-    h_opt = h_form * ruleRunge(m, l, s[0], s[1], h0, eps)
-    h_opt_form = math.ceil(0.5/h_opt)
-    if h_opt_form > (h_form/l):
-        s[2] = compoundQuadratureFormulas(h_opt_form, pointsPerSection, flag_is_newton)
+        s[2] = compoundQuadratureFormulas(h_form * l * l, pointsPerSection, flag_is_newton)
+    h_opt = math.ceil(ruleRunge(m, l, s[0], s[1], h_form, eps))
+    print(h_opt)
+    s[2] = compoundQuadratureFormulas(h_opt, pointsPerSection, flag_is_newton)
+    s[1] = compoundQuadratureFormulas(math.ceil(h_opt / l), pointsPerSection, flag_is_newton)
+    s[0] = compoundQuadratureFormulas(math.ceil(h_opt / (l * l)), pointsPerSection, flag_is_newton)
+    m = processAitken(s[0], s[1], s[2], l)
+    h_opt = math.ceil(ruleRunge(m, l, s[0], s[1], h_opt / (l * l), eps))
+    print(h_opt)
+    s[2] = compoundQuadratureFormulas(h_opt, pointsPerSection, flag_is_newton)
     return s[2]
-print(optimalIntegral(0.01, 0.5, 1, 10**-16) - integralCorrectMean)
+print(optimalIntegral(0.25, 2, 1, 1e-9) - integralCorrectMean)
+
 #print(quadratureFormulaGauss(1.8, 2.3, 7)-integralCorrectMean)
 #printCompoundQF(100)
 #print(printQF(25))
