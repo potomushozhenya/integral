@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from math import factorial
 import matplotlib as mpl
+import gmpy2
 
 mpl.use('Qt5Agg')
 
@@ -186,6 +187,24 @@ def ruleRunge(m, l, sum_h1, sum_h2, h_form, eps):
     return h_form / (0.95 * ( ((eps * (1 - l**(-m))) / abs(sum_h2 - sum_h1) )**(1/m)))
 
 
+def R(s1, s2, l, m):
+    return (s2-s1)/(l**m - 1)
+
+
+def fillArr(m, cm1, cm2, r1, r2, s, h_form, l):
+    if not math.isnan(m[-1]):
+        cm1.append((s[-2] - s[-3]) / ((1 - l ** (-m[-1])) * (math.ceil(h_form / 0.5)) ** m[-1]))
+        cm2.append((s[-1] - s[-2]) / ((1 - l ** (-m[-1])) * (math.ceil((h_form * l) / 0.5)) ** m[-1]))
+        r1.append(R(s[-3], s[-2], l, m[-1]))
+        r2.append(R(s[-2], s[-1], l, m[-1]))
+    else:
+        m.append(0)
+        cm1.append(0)
+        cm2.append(0)
+        r1.append(0)
+        r2.append(0)
+
+
 def optimalIntegral(h0, l, flag_is_newton, eps):
     #if flag_is_newton:
     #    pointsPerSection = 3
@@ -195,20 +214,21 @@ def optimalIntegral(h0, l, flag_is_newton, eps):
     h_form = math.ceil(0.5/h0)
     h = [h_form]
     s = [compoundQuadratureFormulas(h_form * (l**i), pointsPerSection, flag_is_newton) for i in range(3)]
-    m = [0]
-    cm1 = [0]
-    cm2 = [0]
+    m = []
+    r1 = []
+    r2 = []
+    cm1 = []
+    cm2 = []
     #Написать графики m, cm и значений на сетках относительно шага
     while True:
         m.append(processAitken(s[-3], s[-2], s[-1], l))
-        if not math.isnan(m[-1]):
-            cm1.append((s[-2] - s[-3]) / ((1 - l ** (-m[-1])) * (math.ceil(h_form / 0.5)) ** m[-1]))
-            cm2.append((s[-1] - s[-2]) / ((1 - l ** (-m[-1])) * (math.ceil((h_form * l) / 0.5)) ** m[-1]))
-        else:
-            cm1.append(0)
-            cm2.append(0)
-        print(h_form*l*l, m[-1], s[-3] - integralCorrectMean, s[-2] - integralCorrectMean, s[-1] - integralCorrectMean)
-        if abs(m[-2] - m[-1]) < 0.15:
+        fillArr(m, cm1, cm2, r1, r2, s, h_form, l)
+        print(f"m:{m[-1]}")
+        print(f"h:{h_form}, Sh1:{s[-3]}, estErr:{r1[-1]}, absErr:{s[-3] - integralCorrectMean}")
+        print(f"h:{h_form*l}, Sh2:{s[-2]}, estErr:{r1[-1]}, absErr:{s[-2] - integralCorrectMean}")
+        print(f"h:{h_form*l*l}, Sh3:{s[-1]}, estErr:{r2[-1]}, absErr:{s[-1] - integralCorrectMean}")
+        print("---------------------------------------------------------")
+        if len(m) > 1 and abs(m[-2] - m[-1]) < 0.15:
             break
         h_form = h_form * l
         h.append(h_form)
@@ -217,45 +237,51 @@ def optimalIntegral(h0, l, flag_is_newton, eps):
         s.append(compoundQuadratureFormulas(h_form * l * l, pointsPerSection, flag_is_newton))
     h_opt = math.ceil(ruleRunge(m[-1], l, s[-3], s[-2], h_form, eps))
     h.append(h_opt)
-    print(h_opt)
+    print(f"First suggestion h_opt: {h_opt}")
     s.append(compoundQuadratureFormulas(math.ceil(h_opt / (l * l)), pointsPerSection, flag_is_newton))
     s.append(compoundQuadratureFormulas(math.ceil(h_opt / l), pointsPerSection, flag_is_newton))
     s.append(compoundQuadratureFormulas(h_opt, pointsPerSection, flag_is_newton))
-    curr = processAitken(s[-3], s[-2], s[-1], l)
-    if not math.isnan(curr):
-        m.append(curr)
-        cm1.append((s[-2] - s[-3]) / ((1 - l ** (-m[-1])) * (math.ceil(h_form / 0.5)) ** m[-1]))
-        cm2.append((s[-1] - s[-2]) / ((1 - l ** (-m[-1])) * (math.ceil((h_form * l) / 0.5)) ** m[-1]))
-    else:
-        m.append(0)
-        cm1.append(0)
-        cm2.append(0)
+    m.append(processAitken(s[-3], s[-2], s[-1], l))
+    fillArr(m, cm1, cm2, r1, r2, s, h_form, l)
     h_opt = math.ceil(ruleRunge(m[-1], l, s[-3], s[-2], h_opt / (l * l), eps))
     h.append(h_opt)
-    print(h_opt)
-    print(h)
-    print(cm1)
-    print(cm2)
     s.append(compoundQuadratureFormulas(math.ceil(h_opt / (l * l)), pointsPerSection, flag_is_newton))
     s.append(compoundQuadratureFormulas(math.ceil(h_opt / l), pointsPerSection, flag_is_newton))
     s.append(compoundQuadratureFormulas(h_opt, pointsPerSection, flag_is_newton))
-    figure, axis = plt.subplots(2, 3)
+    m.append(processAitken(s[-3], s[-2], s[-1], l))
+    fillArr(m, cm1, cm2, r1, r2, s, h_form, l)
+    print(f"Second suggestion h_opt: {h_opt}")
+    print("h")
+    print(h)
+    print("cm h1h2")
+    print(cm1)
+    print("cm h2h3")
+    print(cm2)
+    print("r h1h2")
+    print(r1)
+    print("r h2h3")
+    print(r2)
+    print(f"Result: {s[-1] - integralCorrectMean}")
+    figure, axis = plt.subplots(2, 4)
     axis[0, 0].plot(h, m)
     axis[0, 0].set_title('m')
     axis[0, 1].plot(h, cm1)
     axis[0, 1].set_title('cm h1h2')
     axis[0, 2].plot(h, cm2)
     axis[0, 2].set_title('cm h2h3')
+    axis[0, 3].plot(h, r1)
+    axis[0, 3].set_title('r h1h2')
     axis[1, 0].plot(h, s[::3])
     axis[1, 0].set_title('s h1')
     axis[1, 1].plot(h, s[1::3])
     axis[1, 1].set_title('s h2')
     axis[1, 2].plot(h, s[2::3])
     axis[1, 2].set_title('s h3')
+    axis[1, 3].plot(h, r2)
+    axis[1, 3].set_title('r h2h3')
     plt.show()
-    return s[-1]
-print(optimalIntegral(0.25, 2, 0, 1e-9) - integralCorrectMean)
 
+optimalIntegral(0.25, 2, 1, 1e-12)
 #print(quadratureFormulaGauss(1.8, 2.3, 7)-integralCorrectMean)
 #printCompoundQF(100)
 #print(printQF(25))
